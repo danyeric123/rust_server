@@ -8,18 +8,14 @@ pub async fn healthz() -> &'static str {
     "OK"
 }
 
-pub async fn get_user(State(pool): State<PgPool>, Path(id): Path<u64>) -> Result<Json<User>, StatusCode> {
+pub async fn get_user(State(pool): State<PgPool>, Path(id): Path<i32>) -> Result<Json<User>, StatusCode> {
     info!("Fetching user with id: {}", id);
     
     let user = sqlx::query_as!(
-        User,
-        r#"
-        SELECT id, name, email
-        FROM users
-        WHERE id = $1
-        "#,
-        id as i64
-    )
+          User,
+          "SELECT id, name, email FROM users WHERE id = $1",
+          id
+      )
     .fetch_one(&pool)
     .await
     .map_err(|e| {
@@ -35,15 +31,11 @@ pub async fn create_user(State(pool): State<PgPool>, Json(payload): Json<CreateU
     info!("Creating user with payload: {:?}", payload);
 
     let user = sqlx::query_as!(
-        User,
-        r#"
-        INSERT INTO users (name, email)
-        VALUES ($1, $2)
-        RETURNING id, name, email
-        "#,
-        payload.name,
-        payload.email
-    ).fetch_one(&pool)
+      User,
+      "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email",
+      payload.name,
+      payload.email
+  ).fetch_one(&pool)
     .await
     .map_err(|e| {
         error!("Failed to create user: {:?}", e);
