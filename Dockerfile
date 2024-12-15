@@ -11,22 +11,22 @@ RUN apt-get update && apt-get install -y libpq-dev
 COPY Cargo.toml Cargo.lock ./
 
 # Set the DATABASE_URL environment variable for the build process
-ENV DATABASE_URL=postgres://user:password@db/rust_db
+ENV DATABASE_URL=postgres://postgres:postgres@localhost/rust_db
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_DB=rust_db
+ENV POSTGRES_HOST=localhost
 
-# Copy the build script
-COPY build.rs ./
-
-# Create dummy src/main.rs to build dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs && \
-    # Build dependencies - this is cached
-    cargo build --release && \
-    # Remove the dummy file
-    rm -rf src
+ENV SQLX_OFFLINE=true
 
 # Now copy the real source code
 COPY src ./src
 
+# Run cargo sqlx prepare to generate sqlx-data.json
+RUN cargo install sqlx-cli && cargo sqlx prepare
+
+# Build the application
+RUN cargo build --release
 
 # Use a different base image for the final image
 FROM ubuntu:20.04
